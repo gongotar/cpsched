@@ -1,0 +1,48 @@
+d = 1;
+fu = @(x, w, t, R, MTTI) abs(MTTI * exp(R / MTTI) * ...
+        (exp((t + x + w) / MTTI) - 1) / (t + x));
+f = @(x, w, t, R, MTTI) t * fu(x, w, t, R, MTTI);
+
+global conflict; 
+global optx; 
+global msg;
+global window;
+
+msg = '';
+conflict = cell(p_conflict);
+optx = cell(p_optx);
+mx = cell(p_mx);
+rx = cell(p_rx);
+window = cell(p_window);
+
+window{1} = double(window{1});
+window{2} = double(window{2});
+
+diff_to_prev = zeros(
+for ii = 1:size(conflict, 2)
+    conflict{ii}.time = double(conflict{ii}.time);
+    conflict{ii}.duration = double(conflict{ii}.duration);
+    optx{ii} = double(optx{ii});
+    mx{ii} = double(mx{ii});
+    rx{ii} = double(rx{ii});
+    
+    for jj = 1:size(conflict, 2)
+        if(conflict{ii}.owner.id == conflict{jj}.owner.id && conflict{jj}.index == conflict{ii}.index - 1)
+            real_x = x(ii) - x(jj);
+            break;
+        end
+    end
+end
+
+g = @(x) f(x(1), double(conflict{1}.duration), double(optx{1}), double(rx{1}), double(mx{1}));
+for ii = 2:size(conflict, 2)
+    %f0 = f(0, conflict{ii}.duration, optx{ii}, rx{ii}, mx{ii});
+    real_x = x(ii);
+
+    g = @(x) f(x(ii), double(conflict{ii}.duration), double(optx{ii}), double(rx{ii}), double(mx{ii})) ^ d + g(x); 
+end
+
+x0 = zeros(size(conflict, 2), 1);
+options = optimoptions(@fmincon,'Algorithm','sqp');
+[x,fval]=fmincon(g,x0,[],[],[],[],[],[],@constraints, []);
+
